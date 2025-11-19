@@ -43,7 +43,28 @@ document.addEventListener('DOMContentLoaded', function () {
     const quotePanelClose = document.querySelector('.quote-panel-close');
     const locationOptionsTemplate = document.getElementById('route-location-options');
     const locationOptionsHtml = locationOptionsTemplate ? locationOptionsTemplate.innerHTML : '';
+    const landVehicleSelect = document.getElementById('landVehicle');
+    const landSeatsInput = document.getElementById('landSeats');
+    const landDepartureInput = document.getElementById('landDeparture');
+    const seaSeatsInput = document.getElementById('seaSeats');
+    const seaDepartureInput = document.getElementById('seaDeparture');
+    const landSection = document.getElementById('landQuoteSection');
+    const seaSection = document.getElementById('seaQuoteSection');
+    const quoteSummary = document.getElementById('quoteSummary');
+
+    const vehicleRates = {
+        camioneta: { label: 'Camioneta', ratePerKm: 32, baseFee: 180, seatFee: 6 },
+        van: { label: 'Van', ratePerKm: 38, baseFee: 240, seatFee: 5 },
+        autobus: { label: 'Autobús', ratePerKm: 45, baseFee: 350, seatFee: 4 }
+    };
+
+    const ferryRates = {
+        ratePerKm: 18,
+        baseFee: 220,
+        seatFee: 12
+    };
     let draggedStop = null;
+    let currentRouteData = null;
 
     function getCategoryIcon(type) {
         const style = categoryStyles[type] || categoryStyles["default"];
@@ -120,9 +141,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function drawRouteIfReady() {
         if (!selectedFromId || !selectedToId || selectedFromId === selectedToId) {
             clearRoute();
+            currentRouteData = null;
             if (distanceControl) {
                 distanceControl.innerHTML = distancePlaceholder;
             }
+            updateQuoteSections();
             return;
         }
 
@@ -142,8 +165,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
+                currentRouteData = {
+                    segments: data.segments,
+                    distanceKm: data.distanceKm,
+                    durationMinutes: data.durationMinutes
+                };
                 renderRouteSegments(data.segments);
                 updateDistanceIndicator(data.distanceKm, data.durationMinutes);
+                updateQuoteSections();
             })
             .catch(() => {
                 drawFallbackRoute();
@@ -271,6 +300,16 @@ document.addEventListener('DOMContentLoaded', function () {
             icon: getPointIcon('destination'),
             zIndexOffset: 1000
         }).addTo(map);
+
+        currentRouteData = {
+            segments: [{
+                mode: 'land',
+                distanceKm: distance
+            }],
+            distanceKm: distance,
+            durationMinutes: timeMinutes
+        };
+        updateQuoteSections();
     }
 
     function getDistanceInKm(a, b) {
@@ -431,18 +470,110 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function handlePopupAction(action, id) {
-        const select = routeList?.querySelector(`#${action === 'origin' ? 'fromLocation' : action === 'destination' ? 'toLocation' : ''}`);
-        if (action === 'origin' && select) {
-            select.value = id;
-            selectedFromId = id;
-            focusLocationById(id);
-        } else if (action === 'destination' && select) {
-            select.value = id;
-            selectedToId = id;
+        if (action === 'origin') {
+            const select = document.getElementById('fromLocation');
+            if (select) {
+                select.value = id;
+                selectedFromId = id;
+                focusLocationById(id);
+            }
+        } else if (action === 'destination') {
+            const select = document.getElementById('toLocation');
+            if (select) {
+                select.value = id;
+                selectedToId = id;
+            }
         } else if (action === 'stop') {
             addIntermediateStop(id);
         }
         drawRouteIfReady();
+    }
+
+    function updateQuoteSections() {
+        if (!quoteSummary) {
+            return;
+        }
+
+        if (!currentRouteData) {
+            landSection?.classList.add('hidden');
+            seaSection?.classList.add('hidden');
+            quoteSummary.innerHTML = '<p class="quote-summary-empty">Genera una ruta para cotizar.</p>';
+            return;
+        }
+
+        const landDistance = getModeDistance('land');
+        const seaDistance = getModeDistance('sea');
+        if (landSection) {
+            landSection.classList.toggle('hidden', landDistance <= 0);
+        }
+        if (seaSection) {
+            seaSection.classList.toggle('hidden', seaDistance <= 0);
+        }
+
+        updateQuoteSummary();
+    }
+
+    function getModeDistance(mode) {
+        if (!currentRouteData || !currentRouteData.segments) return 0;
+        return currentRouteData.segments
+            .filter(segment => mode === 'sea' ? segment.mode === 'sea' : segment.mode !== 'sea')
+            .reduce((sum, segment) => sum + (segment.distanceKm || 0), 0);
+    }
+
+    function updateQuoteSummary() {
+        if (!quoteSummary) return;
+        if (!currentRouteData) {
+            quoteSummary.innerHTML = '<p class="quote-summary-empty">Genera una ruta para cotizar.</p>';
+            return;
+        }
+
+        const landDistance = getModeDistance('land');
+        const seaDistance = getModeDistance('sea');
+        const summaryLines = [];
+
+        if (landDistance > 0 && landVehicleSelect) {
+            const vehicleKey = landVehicleSelect.value || 'camioneta';
+            const vehicle = vehicleRates[vehicleKey] || vehicleRates.camioneta;
+            const seats = parseInt(landSeatsInput?.value || '0', 10) || 0;
+            const landCost = vehicle.baseFee + vehicle.ratePerKm * landDistance + Math.max(seats, 0) * vehicle.seatFee;
+            summaryLines.push({
+                label: `Transporte terrestre (${vehicle.label})`,
+                info: `${landDistance.toFixed(1)} km`,
+                value: landCost
+            });
+        }
+
+        if (seaDistance > 0 && seaSection && !seaSection.classList.contains('hidden')) {
+            const seatsSea = parseInt(seaSeatsInput?.value || '0', 10) || 0;
+            const seaCost = ferryRates.baseFee + ferryRates.ratePerKm * seaDistance + Math.max(seatsSea, 0) * ferryRates.seatFee;
+            summaryLines.push({
+                label: 'Transporte marítimo (ferri)',
+                info: `${seaDistance.toFixed(1)} km`,
+                value: seaCost
+            });
+        }
+
+        if (!summaryLines.length) {
+            quoteSummary.innerHTML = '<p class="quote-summary-empty">No hay costos disponibles para esta ruta.</p>';
+            return;
+        }
+
+        const total = summaryLines.reduce((sum, line) => sum + line.value, 0);
+        quoteSummary.innerHTML = summaryLines.map(line => `
+            <div class="quote-summary-line">
+                <span>${line.label}${line.info ? ` <small>${line.info}</small>` : ''}</span>
+                <strong>${formatCurrency(line.value)}</strong>
+            </div>
+        `).join('') + `
+            <div class="quote-summary-line quote-summary-total">
+                <span>Total estimado</span>
+                <strong>${formatCurrency(total)}</strong>
+            </div>
+        `;
+    }
+
+    function formatCurrency(value) {
+        return `$${value.toFixed(2)}`;
     }
 
     function handleDrop(e) {
@@ -548,6 +679,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     map.on('zoomend', applyMarkerScale);
+    updateQuoteSections();
 
     if (quoteButton) {
         quoteButton.addEventListener('click', function () {
@@ -565,6 +697,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const select = e.target.closest('select');
         if (!select) return;
         select.classList.remove('select-invalid');
+    });
+
+    [landVehicleSelect, landSeatsInput, landDepartureInput, seaSeatsInput, seaDepartureInput].forEach(element => {
+        element?.addEventListener('change', () => updateQuoteSummary());
     });
 
     quotePanelClose?.addEventListener('click', () => {
@@ -591,6 +727,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (isValid) {
             quotePanel?.classList.remove('hidden');
+            updateQuoteSections();
         }
     }
 });

@@ -107,6 +107,44 @@
                 </button>
             </div>
             <div class="quote-panel-body">
+                <div class="quote-section" id="landQuoteSection">
+                    <div class="quote-section-header">
+                        <h3>Transporte terrestre</h3>
+                    </div>
+                    <div class="quote-field">
+                        <label for="landVehicle">Tipo de vehículo</label>
+                        <select id="landVehicle">
+                            <option value="camioneta">Camioneta (hasta 6 pax)</option>
+                            <option value="van">Van (hasta 12 pax)</option>
+                            <option value="autobus">Autobús (hasta 40 pax)</option>
+                        </select>
+                    </div>
+                    <div class="quote-field grid">
+                        <div>
+                            <label for="landSeats">Asientos requeridos</label>
+                            <input type="number" id="landSeats" min="1" value="4" />
+                        </div>
+                        <div>
+                            <label for="landDeparture">Hora de partida</label>
+                            <input type="time" id="landDeparture" />
+                        </div>
+                    </div>
+                </div>
+                <div class="quote-section hidden" id="seaQuoteSection">
+                    <div class="quote-section-header">
+                        <h3>Transporte marítimo</h3>
+                    </div>
+                    <div class="quote-field">
+                        <label for="seaSeats">Pasajeros en ferri</label>
+                        <input type="number" id="seaSeats" min="1" value="2" />
+                    </div>
+                    <div class="quote-field">
+                        <label for="seaDeparture">Hora de embarque</label>
+                        <input type="time" id="seaDeparture" />
+                    </div>
+                </div>
+                <div class="quote-summary" id="quoteSummary"></div>
+                <button type="button" class="quote-confirm">Confirmar cotización</button>
             </div>
         </div>
         <div class="map-area">

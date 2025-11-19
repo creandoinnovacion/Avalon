@@ -96,5 +96,5 @@
 /Users/javier/RiderProjects/Avalon/TransportQuote/obj/Debug/net10.0/TransportQuote.genruntimeconfig.cache
 /Users/javier/RiderProjects/Avalon/TransportQuote/obj/Debug/net10.0/ref/TransportQuote.dll
 /Users/javier/RiderProjects/Avalon/TransportQuote/obj/Debug/net10.0/TransportQuote.sourcelink.json
-/Users/javier/RiderProjects/Avalon/TransportQuote/obj/Debug/net10.0/compressed/1x5ylc486p-{0}-7nc5vyktan-7nc5vyktan.gz
-/Users/javier/RiderProjects/Avalon/TransportQuote/obj/Debug/net10.0/compressed/u8wgtnbeid-{0}-52laqeiy5i-52laqeiy5i.gz
+/Users/javier/RiderProjects/Avalon/TransportQuote/obj/Debug/net10.0/compressed/u8wgtnbeid-{0}-ypsp8y2ab6-ypsp8y2ab6.gz
+/Users/javier/RiderProjects/Avalon/TransportQuote/obj/Debug/net10.0/compressed/1x5ylc486p-{0}-d0aszygjr1-d0aszygjr1.gz

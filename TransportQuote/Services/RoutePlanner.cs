@@ -70,20 +70,22 @@ public class RoutePlanner
                 segments.Add(new RouteSegmentDto
                 {
                     Mode = "land",
-                    Coordinates = ConvertCoordinates(coordinates)
+                    Coordinates = ConvertCoordinates(coordinates),
+                    DistanceKm = routeSegment.DistanceKm
                 });
                 totalDistance += routeSegment.DistanceKm;
                 totalDuration += routeSegment.DurationMinutes;
             }
             else if (step.Type == RouteStepType.Sea)
             {
+                var seaDistance = GeoDistance(step.Start, step.End);
                 segments.Add(new RouteSegmentDto
                 {
                     Mode = "sea",
-                    Coordinates = ConvertCoordinates(new List<GeoCoordinate> { step.Start, step.End })
+                    Coordinates = ConvertCoordinates(new List<GeoCoordinate> { step.Start, step.End }),
+                    DistanceKm = seaDistance
                 });
 
-                var seaDistance = GeoDistance(step.Start, step.End);
                 totalDistance += seaDistance;
                 totalDuration += EstimateFerryMinutes(seaDistance);
             }

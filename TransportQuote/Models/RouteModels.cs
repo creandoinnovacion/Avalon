@@ -15,6 +15,8 @@ public class RouteSegmentDto
 
     [JsonPropertyName("coordinates")]
     public List<double[]> Coordinates { get; set; } = new();
+
+    public double DistanceKm { get; set; }
 }
 
 public class RouteResponseDto
