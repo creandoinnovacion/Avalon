@@ -1,0 +1,86 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Transport Quote";
+    Layout = null; // Use null layout to have full control over the page structure for full screen map
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+          
+    <!-- Custom Map Styles -->
+    <link rel="stylesheet" href="~/css/map-styles.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+</head>
+<body>
+    <div class="map-app">
+        <aside class="glass-sidebar">
+            <div class="sidebar-title">Reserva tu traslado</div>
+            <div class="sidebar-section">
+                <label for="serviceType">Tipo de servicio <span class="required-indicator">*</span></label>
+                <select id="serviceType" required>
+                    <option value="" disabled selected>Selecciona una opción</option>
+                    <option value="roundtrip">Roundtrip</option>
+                    <option value="oneway">One Way</option>
+                </select>
+            </div>
+            <div class="sidebar-section">
+                <label for="fromLocation">Desde <span class="required-indicator">*</span></label>
+                <select id="fromLocation" required>
+                    <option value="" disabled selected>Selecciona un punto de partida</option>
+                    @foreach (var loc in Model.Locations.Where(l => l.Type == "Aeropuerto").OrderBy(l => l.Name))
+                    {
+                        <option value="@loc.Id">@loc.Name</option>
+                    }
+                    @foreach (var loc in Model.Locations.Where(l => l.Type != "Aeropuerto").OrderBy(l => l.Name))
+                    {
+                        <option value="@loc.Id">@loc.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="sidebar-section">
+                <label for="toLocation">Hacia <span class="required-indicator">*</span></label>
+                <select id="toLocation" required>
+                    <option value="" disabled selected>Selecciona un destino</option>
+                    @foreach (var loc in Model.Locations.OrderBy(l => l.Name))
+                    {
+                        <option value="@loc.Id">@loc.Name</option>
+                    }
+                </select>
+            </div>
+        </aside>
+        <div class="map-area">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+
+    <!-- Custom Map Logic -->
+    <script src="~/js/map-logic.js"></script>
+
+    <script>
+        // Serialize C# model data to JSON and pass to JS function
+        var locations = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Locations, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+        
+        // Wait for map logic to load then init markers
+        window.addEventListener('load', function() {
+            if (window.initMapMarkers) {
+                window.initMapMarkers(locations);
+            }
+        });
+    </script>
+</body>
+</html>
