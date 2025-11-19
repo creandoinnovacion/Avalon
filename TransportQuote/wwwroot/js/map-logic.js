@@ -100,6 +100,81 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        fetch('/api/routes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ fromId: selectedFromId, toId: selectedToId })
+        })
+            .then(response => response.ok ? response.json() : null)
+            .then(data => {
+                if (!data || !data.success || !data.segments || !data.segments.length) {
+                    drawFallbackRoute();
+                    return;
+                }
+
+                renderRouteSegments(data.segments);
+                updateDistanceIndicator(data.distanceKm, data.durationMinutes);
+            })
+            .catch(() => {
+                drawFallbackRoute();
+            });
+    }
+
+    function renderRouteSegments(segments) {
+        clearRoute();
+        const bounds = [];
+
+        segments.forEach(segment => {
+            const coords = segment.coordinates.map(pair => [pair[0], pair[1]]);
+            if (!coords.length) return;
+            bounds.push(...coords);
+
+            const style = segment.mode === 'sea'
+                ? {
+                    color: '#18d4ff',
+                    weight: 4,
+                    opacity: 0.85,
+                    dashArray: '10 8',
+                    pane: 'routePane'
+                }
+                : {
+                    color: '#0a84ff',
+                    weight: 6,
+                    opacity: 0.95,
+                    pane: 'routePane'
+                };
+
+            const line = L.polyline(coords, style).addTo(map);
+            routeLayers.push(line);
+        });
+
+        if (bounds.length) {
+            map.fitBounds(bounds, { padding: [80, 80] });
+        }
+    }
+
+    function updateDistanceIndicator(distanceKm, durationMinutes) {
+        if (!distanceControl) return;
+        const hours = Math.floor(durationMinutes / 60);
+        const minutes = Math.round(durationMinutes % 60);
+        const timeString = hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
+
+        distanceControl.innerHTML = `
+            <div class="metric-title">Resumen del trayecto</div>
+            <div class="metric-row">
+                <div class="metric-label">Total kilómetros</div>
+                <div class="metric-value">${distanceKm.toFixed(1)} km</div>
+            </div>
+            <div class="metric-row">
+                <div class="metric-label">Tiempo estimado</div>
+                <div class="metric-value">${timeString}</div>
+            </div>
+        `;
+    }
+
+    function drawFallbackRoute() {
         const from = locationLookup[selectedFromId];
         const to = locationLookup[selectedToId];
         if (!from || !to) return;
@@ -129,24 +204,9 @@ document.addEventListener('DOMContentLoaded', function () {
         routeLayers.push(glow, core);
         map.fitBounds([path[0], path[1]], { padding: [80, 80] });
 
-        if (distanceControl) {
-            const distance = getDistanceInKm(from, to);
-            const timeMinutes = estimateTravelMinutes(distance);
-            const hours = Math.floor(timeMinutes / 60);
-            const minutes = Math.round(timeMinutes % 60);
-            const timeString = hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
-            distanceControl.innerHTML = `
-                <div class="metric-title">Resumen del trayecto</div>
-                <div class="metric-row">
-                    <div class="metric-label">Total kilómetros</div>
-                    <div class="metric-value">${distance.toFixed(1)} km</div>
-                </div>
-                <div class="metric-row">
-                    <div class="metric-label">Tiempo estimado</div>
-                    <div class="metric-value">${timeString}</div>
-                </div>
-            `;
-        }
+        const distance = getDistanceInKm(from, to);
+        const timeMinutes = estimateTravelMinutes(distance);
+        updateDistanceIndicator(distance, timeMinutes);
     }
 
     function getDistanceInKm(a, b) {
