@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize the map centered on Cancun
     var map = L.map('map').setView([21.1619, -86.8515], 10);
+    map.createPane('routePane');
+    map.getPane('routePane').style.zIndex = 700;
 
     // Add OpenStreetMap tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -28,6 +30,11 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedFromId = null;
     let selectedToId = null;
     const routeLayers = [];
+    let distanceControl = null;
+    const distancePlaceholder = `
+        <div class="metric-title">Resumen del trayecto</div>
+        <div class="metric-placeholder">Selecciona origen y destino para ver la distancia.</div>
+    `;
 
     function getCategoryIcon(type) {
         const style = categoryStyles[type] || categoryStyles["default"];
@@ -87,6 +94,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function drawRouteIfReady() {
         if (!selectedFromId || !selectedToId || selectedFromId === selectedToId) {
             clearRoute();
+            if (distanceControl) {
+                distanceControl.innerHTML = distancePlaceholder;
+            }
             return;
         }
 
@@ -104,18 +114,61 @@ document.addEventListener('DOMContentLoaded', function () {
             color: 'rgba(99, 190, 255, 0.45)',
             weight: 10,
             opacity: 0.7,
-            lineCap: 'round'
+            lineCap: 'round',
+            pane: 'routePane'
         }).addTo(map);
 
         const core = L.polyline(path, {
             color: '#0a84ff',
             weight: 5,
             opacity: 0.9,
-            lineCap: 'round'
+            lineCap: 'round',
+            pane: 'routePane'
         }).addTo(map);
 
         routeLayers.push(glow, core);
         map.fitBounds([path[0], path[1]], { padding: [80, 80] });
+
+        if (distanceControl) {
+            const distance = getDistanceInKm(from, to);
+            const timeMinutes = estimateTravelMinutes(distance);
+            const hours = Math.floor(timeMinutes / 60);
+            const minutes = Math.round(timeMinutes % 60);
+            const timeString = hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
+            distanceControl.innerHTML = `
+                <div class="metric-title">Resumen del trayecto</div>
+                <div class="metric-row">
+                    <div class="metric-label">Total kilómetros</div>
+                    <div class="metric-value">${distance.toFixed(1)} km</div>
+                </div>
+                <div class="metric-row">
+                    <div class="metric-label">Tiempo estimado</div>
+                    <div class="metric-value">${timeString}</div>
+                </div>
+            `;
+        }
+    }
+
+    function getDistanceInKm(a, b) {
+        const R = 6371;
+        const dLat = (b.latitude - a.latitude) * Math.PI / 180;
+        const dLon = (b.longitude - a.longitude) * Math.PI / 180;
+        const lat1 = a.latitude * Math.PI / 180;
+        const lat2 = b.latitude * Math.PI / 180;
+
+        const sinLat = Math.sin(dLat / 2);
+        const sinLon = Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(
+            Math.sqrt(sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon),
+            Math.sqrt(1 - sinLat * sinLat - Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon)
+        );
+
+        return R * c;
+    }
+
+    function estimateTravelMinutes(distanceKm) {
+        const averageSpeedKmH = 60;
+        return (distanceKm / averageSpeedKmH) * 60;
     }
 
     function applyMarkerScale() {
@@ -186,6 +239,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 selectedToId = this.value;
                 drawRouteIfReady();
             });
+        }
+
+        distanceControl = document.querySelector('.distance-indicator');
+        if (distanceControl) {
+            distanceControl.innerHTML = distancePlaceholder;
         }
     };
 
