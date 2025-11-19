@@ -89,6 +89,7 @@
                         }
                     </select>
                 </div>
+                <button type="button" class="quote-button">Generar cotización</button>
             </div>
             <script type="text/template" id="route-location-options">
                 <option value="" disabled selected>Selecciona un lugar</option>
@@ -98,6 +99,17 @@
                 }
             </script>
         </aside>
+        <div class="quote-panel hidden" id="quotePanel">
+            <div class="quote-panel-header">
+                <h2>Resumen de cotización</h2>
+                <button type="button" class="quote-panel-close" aria-label="Cerrar panel">
+                    <span class="material-symbols-rounded">close</span>
+                </button>
+            </div>
+            <div class="quote-panel-body">
+                <p>Completa la información de la ruta para generar tu cotización. Aquí podrás ver desglose de tarifas, servicios incluidos y notas adicionales.</p>
+            </div>
+        </div>
         <div class="map-area">
             <div id="map"></div>
         </div>

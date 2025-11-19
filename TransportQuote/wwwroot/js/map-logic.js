@@ -25,6 +25,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const markers = [];
     const locationLookup = {};
     let selectedMarker = null;
+    let destinationMarker = null;
+    let stopMarkers = [];
     let selectedFromId = null;
     let selectedToId = null;
     const routeLayers = [];
@@ -35,6 +37,10 @@ document.addEventListener('DOMContentLoaded', function () {
     `;
     const routeList = document.getElementById('routeList');
     const addStopSelect = document.getElementById('addStopSelect');
+    const serviceTypeSelect = document.getElementById('serviceType');
+    const quoteButton = document.querySelector('.quote-button');
+    const quotePanel = document.getElementById('quotePanel');
+    const quotePanelClose = document.querySelector('.quote-panel-close');
     const locationOptionsTemplate = document.getElementById('route-location-options');
     const locationOptionsHtml = locationOptionsTemplate ? locationOptionsTemplate.innerHTML : '';
     let draggedStop = null;
@@ -75,12 +81,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!id || !locationLookup[id]) return;
         const loc = locationLookup[id];
 
-        if (selectedMarker) {
-            map.removeLayer(selectedMarker);
-        }
-
+        clearMarkers();
         selectedMarker = L.marker([loc.latitude, loc.longitude], {
-            icon: getSelectionIcon(),
+            icon: getPointIcon('origin'),
             zIndexOffset: 1000
         }).addTo(map);
 
@@ -92,6 +95,19 @@ document.addEventListener('DOMContentLoaded', function () {
             const layer = routeLayers.pop();
             map.removeLayer(layer);
         }
+    }
+
+    function clearMarkers() {
+        if (selectedMarker) {
+            map.removeLayer(selectedMarker);
+            selectedMarker = null;
+        }
+        if (destinationMarker) {
+            map.removeLayer(destinationMarker);
+            destinationMarker = null;
+        }
+        stopMarkers.forEach(marker => map.removeLayer(marker));
+        stopMarkers = [];
     }
 
     function getStopIds() {
@@ -136,6 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderRouteSegments(segments) {
         clearRoute();
+        clearMarkers();
         const bounds = [];
 
         segments.forEach(segment => {
@@ -161,6 +178,29 @@ document.addEventListener('DOMContentLoaded', function () {
             const line = L.polyline(coords, style).addTo(map);
             routeLayers.push(line);
         });
+
+        if (selectedFromId && locationLookup[selectedFromId]) {
+            selectedMarker = L.marker([locationLookup[selectedFromId].latitude, locationLookup[selectedFromId].longitude], {
+                icon: getPointIcon('origin'),
+                zIndexOffset: 1000
+            }).addTo(map);
+        }
+
+        const intermediateStops = getStopIds().map(id => locationLookup[id]).filter(Boolean);
+        intermediateStops.forEach(stop => {
+            const marker = L.marker([stop.latitude, stop.longitude], {
+                icon: getPointIcon('stop'),
+                zIndexOffset: 900
+            }).addTo(map);
+            stopMarkers.push(marker);
+        });
+
+        if (selectedToId && locationLookup[selectedToId]) {
+            destinationMarker = L.marker([locationLookup[selectedToId].latitude, locationLookup[selectedToId].longitude], {
+                icon: getPointIcon('destination'),
+                zIndexOffset: 1000
+            }).addTo(map);
+        }
 
         if (bounds.length) {
             map.fitBounds(bounds, { padding: [80, 80] });
@@ -193,6 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!from || !to) return;
 
         clearRoute();
+        clearMarkers();
         const path = [
             [from.latitude, from.longitude],
             [to.latitude, to.longitude]
@@ -220,6 +261,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const distance = getDistanceInKm(from, to);
         const timeMinutes = estimateTravelMinutes(distance);
         updateDistanceIndicator(distance, timeMinutes);
+
+        selectedMarker = L.marker([from.latitude, from.longitude], {
+            icon: getPointIcon('origin'),
+            zIndexOffset: 1000
+        }).addTo(map);
+
+        destinationMarker = L.marker([to.latitude, to.longitude], {
+            icon: getPointIcon('destination'),
+            zIndexOffset: 1000
+        }).addTo(map);
     }
 
     function getDistanceInKm(a, b) {
@@ -286,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
         stops.forEach((stop, index) => {
             stop.classList.remove('route-stop--origin', 'route-stop--destination', 'route-stop--stop');
             const label = stop.querySelector('label');
-            const select = stop.querySelector('select');
+        const select = stop.querySelector('select');
             const removeButton = stop.querySelector('.route-stop-remove');
             select.removeAttribute('id');
 
@@ -317,23 +368,6 @@ document.addEventListener('DOMContentLoaded', function () {
             attachStopEvents(stop);
         });
 
-        attachRouteSelectListeners();
-    }
-
-    function attachRouteSelectListeners() {
-        if (!routeList) return;
-        const selects = routeList.querySelectorAll('.route-stop select');
-        selects.forEach(select => {
-            select.onchange = function () {
-                if (this.id === 'fromLocation') {
-                    selectedFromId = this.value;
-                    focusLocationById(selectedFromId);
-                } else if (this.id === 'toLocation') {
-                    selectedToId = this.value;
-                }
-                drawRouteIfReady();
-            };
-        });
     }
 
     function addIntermediateStop(value) {
@@ -407,6 +441,40 @@ document.addEventListener('DOMContentLoaded', function () {
         drawRouteIfReady();
     }
 
+    function getPointIcon(type) {
+        const colors = {
+            origin: { base: '#007aff', inner: '#ffffff' },
+            destination: { base: '#34c759', inner: '#ffffff' },
+            stop: { base: '#ff9f0a', inner: '#ffffff' }
+        };
+        const palette = colors[type] || colors.origin;
+        return L.divIcon({
+            html: `
+                <div class="selection-pin selection-${type}">
+                    <div class="pin-inner" style="background:${palette.inner};"></div>
+                </div>
+            `,
+            className: "",
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -28]
+        });
+    }
+
+    if (routeList) {
+        routeList.addEventListener('change', function (e) {
+            const select = e.target.closest('select');
+            if (!select) return;
+            if (select.id === 'fromLocation') {
+                selectedFromId = select.value;
+                focusLocationById(selectedFromId);
+            } else if (select.id === 'toLocation') {
+                selectedToId = select.value;
+            }
+            drawRouteIfReady();
+        });
+    }
+
     window.initMapMarkers = function (locations) {
         locations.forEach(function (loc) {
             locationLookup[loc.id] = loc;
@@ -423,8 +491,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="popup-cover" style="background-image: url('${imageUrl}');">
                         <div class="popup-cover-overlay"></div>
                     </div>
-                    <div class="popup-info">
-                        <span class="popup-type">${loc.type}</span>
+                <div class="popup-info">
+                    <span class="popup-type">${loc.type}</span>
                         <h3>${loc.name}</h3>
                         <p>${loc.description}</p>
                     </div>
@@ -446,4 +514,49 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     map.on('zoomend', applyMarkerScale);
+
+    if (quoteButton) {
+        quoteButton.addEventListener('click', function () {
+            validateRequiredFields();
+        });
+    }
+
+    if (serviceTypeSelect) {
+        serviceTypeSelect.addEventListener('change', function () {
+            this.classList.remove('select-invalid');
+        });
+    }
+
+    routeList?.addEventListener('change', function (e) {
+        const select = e.target.closest('select');
+        if (!select) return;
+        select.classList.remove('select-invalid');
+    });
+
+    quotePanelClose?.addEventListener('click', () => {
+        quotePanel?.classList.add('hidden');
+    });
+
+    function validateRequiredFields() {
+        let isValid = true;
+        const fromSelect = document.getElementById('fromLocation');
+        const toSelect = document.getElementById('toLocation');
+
+        if (serviceTypeSelect && !serviceTypeSelect.value) {
+            serviceTypeSelect.classList.add('select-invalid');
+            isValid = false;
+        }
+        if (fromSelect && !fromSelect.value) {
+            fromSelect.classList.add('select-invalid');
+            isValid = false;
+        }
+        if (toSelect && !toSelect.value) {
+            toSelect.classList.add('select-invalid');
+            isValid = false;
+        }
+
+        if (isValid) {
+            quotePanel?.classList.remove('hidden');
+        }
+    }
 });

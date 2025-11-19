@@ -33,6 +33,63 @@ body, html {
     z-index: 5;
 }
 
+.quote-panel {
+    width: 640px;
+    position: absolute;
+    top: 28px;
+    left: calc(28px + 366px + 10px);
+    bottom: 28px;
+    padding: 28px;
+    border-radius: 28px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.2), rgba(13, 27, 42, 0.15));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 45px 80px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    backdrop-filter: saturate(160%) blur(28px);
+    -webkit-backdrop-filter: saturate(160%) blur(28px);
+    color: rgba(20, 28, 38, 0.95);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    z-index: 4;
+}
+
+.quote-panel.hidden {
+    display: none;
+}
+
+.quote-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.quote-panel-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.quote-panel-close {
+    border: none;
+    background: rgba(20, 28, 38, 0.08);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    color: rgba(20, 28, 38, 0.6);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quote-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    color: rgba(20, 28, 38, 0.85);
+    line-height: 1.4;
+}
+
 .sidebar-title {
     font-size: 1.8rem;
     font-weight: 600;
@@ -152,11 +209,12 @@ body, html {
 .route-stop {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     padding: 12px 14px;
     border-radius: 18px;
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid rgba(20, 28, 38, 0.08);
+    flex-wrap: nowrap;
 }
 
 .route-stop.dragging {
@@ -170,7 +228,7 @@ body, html {
     align-items: center;
     justify-content: center;
     cursor: grab;
-    margin-left: auto;
+    align-self: center;
 }
 
 .route-stop-handle::before {
@@ -186,9 +244,11 @@ body, html {
 
 .route-stop-body {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    margin-right: 10px;
 }
 
 .route-stop-body label {
@@ -205,18 +265,28 @@ body, html {
     color: rgba(20, 28, 38, 0.95);
     background: rgba(255, 255, 255, 0.85);
     appearance: none;
-    width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+
+.select-invalid {
+    border-color: rgba(255, 59, 48, 0.9);
+    box-shadow: 0 0 0 1px rgba(255, 59, 48, 0.4);
 }
 
 .route-stop-remove {
     border: none;
-    background: transparent;
-    color: rgba(20, 28, 38, 0.45);
+    background: rgba(20, 28, 38, 0.35);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    color: #fff;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 6px;
+    padding: 0;
+    align-self: center;
 }
 
 .route-stop--origin .route-stop-remove,
@@ -233,6 +303,7 @@ body, html {
 .route-stop-add label {
     font-size: 0.9rem;
     color: rgba(20, 28, 38, 0.8);
+    font-weight: 600;
 }
 
 .route-stop-add select {
@@ -243,6 +314,30 @@ body, html {
     color: rgba(20, 28, 38, 0.95);
     background: rgba(255, 255, 255, 0.85);
     appearance: none;
+}
+
+.quote-button {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    border: none;
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.9), rgba(0, 94, 204, 0.9));
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    box-shadow: 0 12px 24px rgba(0, 122, 255, 0.3);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quote-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(0, 122, 255, 0.35);
+}
+
+.quote-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 8px 18px rgba(0, 122, 255, 0.25);
 }
 
 .glass-sidebar::before {
@@ -511,11 +606,22 @@ body, html {
     height: 44px;
     position: relative;
     border-radius: 50%;
-    background: linear-gradient(150deg, #4da9ff, #007aff);
     border: 3px solid #ffffff;
-    box-shadow: 0 8px 25px rgba(0, 122, 255, 0.35);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     transform-origin: center;
     animation: drop-pin 0.35s ease;
+}
+
+.selection-origin {
+    background: linear-gradient(150deg, #4da9ff, #007aff);
+}
+
+.selection-destination {
+    background: linear-gradient(150deg, #5ad776, #34c759);
+}
+
+.selection-stop {
+    background: linear-gradient(150deg, #ffb347, #ff8c00);
 }
 
 .selection-pin::after {
