@@ -430,6 +430,21 @@ document.addEventListener('DOMContentLoaded', function () {
         routeList.insertBefore(draggedStop, insertAfter ? target.nextSibling : target);
     }
 
+    function handlePopupAction(action, id) {
+        const select = routeList?.querySelector(`#${action === 'origin' ? 'fromLocation' : action === 'destination' ? 'toLocation' : ''}`);
+        if (action === 'origin' && select) {
+            select.value = id;
+            selectedFromId = id;
+            focusLocationById(id);
+        } else if (action === 'destination' && select) {
+            select.value = id;
+            selectedToId = id;
+        } else if (action === 'stop') {
+            addIntermediateStop(id);
+        }
+        drawRouteIfReady();
+    }
+
     function handleDrop(e) {
         e.preventDefault();
     }
@@ -491,10 +506,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="popup-cover" style="background-image: url('${imageUrl}');">
                         <div class="popup-cover-overlay"></div>
                     </div>
-                <div class="popup-info">
-                    <span class="popup-type">${loc.type}</span>
+                    <div class="popup-info">
+                        <span class="popup-type">${loc.type}</span>
                         <h3>${loc.name}</h3>
                         <p>${loc.description}</p>
+                        <div class="popup-actions">
+                            <button class="popup-action" data-action="origin" data-id="${loc.id}">Agregar Origen</button>
+                            <button class="popup-action" data-action="destination" data-id="${loc.id}">Agregar Destino</button>
+                            <button class="popup-action" data-action="stop" data-id="${loc.id}">Agregar Parada</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -511,6 +531,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
         initializeRouteStops();
         drawRouteIfReady();
+
+        map.on('popupopen', function (e) {
+            const popup = e.popup;
+            const container = popup.getElement();
+            if (!container) return;
+            container.querySelectorAll('.popup-action').forEach(button => {
+                button.addEventListener('click', () => {
+                    const action = button.dataset.action;
+                    const id = button.dataset.id;
+                    handlePopupAction(action, id);
+                    popup.remove();
+                });
+            });
+        });
     };
 
     map.on('zoomend', applyMarkerScale);
