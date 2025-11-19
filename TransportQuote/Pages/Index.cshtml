@@ -3,6 +3,9 @@
 @{
     ViewData["Title"] = "Transport Quote";
     Layout = null; // Use null layout to have full control over the page structure for full screen map
+    var airports = Model.Locations.Where(l => l.Type == "Aeropuerto").OrderBy(l => l.Name).ToList();
+    var nonAirports = Model.Locations.Where(l => l.Type != "Aeropuerto").OrderBy(l => l.Name).ToList();
+    var orderedLocations = Model.Locations.OrderBy(l => l.Name).ToList();
 }
 
 <!DOCTYPE html>
@@ -33,31 +36,67 @@
                     <option value="oneway">One Way</option>
                 </select>
             </div>
-            <div class="sidebar-section">
-                <label for="fromLocation">Desde <span class="required-indicator">*</span></label>
-                <select id="fromLocation" required>
-                    <option value="" disabled selected>Selecciona un punto de partida</option>
-                    @foreach (var loc in Model.Locations.Where(l => l.Type == "Aeropuerto").OrderBy(l => l.Name))
-                    {
-                        <option value="@loc.Id">@loc.Name</option>
-                    }
-                    @foreach (var loc in Model.Locations.Where(l => l.Type != "Aeropuerto").OrderBy(l => l.Name))
-                    {
-                        <option value="@loc.Id">@loc.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="sidebar-section">
-                <label for="toLocation">Hacia <span class="required-indicator">*</span></label>
-                <select id="toLocation" required>
-                    <option value="" disabled selected>Selecciona un destino</option>
-                    @foreach (var loc in Model.Locations.OrderBy(l => l.Name))
-                    {
-                        <option value="@loc.Id">@loc.Name</option>
-                    }
-                </select>
-            </div>
             <div class="distance-indicator"></div>
+            <div class="route-summary-panel">
+                <div class="route-summary-header">
+                    <span class="route-summary-title">Itinerario</span>
+                </div>
+                <div class="route-list" id="routeList">
+                    <div class="route-stop route-stop--origin" draggable="true">
+                        <div class="route-stop-body">
+                            <label>Origen <span class="required-indicator">*</span></label>
+                            <select id="fromLocation" required>
+                                <option value="" disabled selected>Selecciona un punto de partida</option>
+                                @foreach (var loc in airports)
+                                {
+                                    <option value="@loc.Id">@loc.Name</option>
+                                }
+                                @foreach (var loc in nonAirports)
+                                {
+                                    <option value="@loc.Id">@loc.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <button type="button" class="route-stop-remove" aria-label="Eliminar parada">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                        <div class="route-stop-handle"></div>
+                    </div>
+                    <div class="route-stop route-stop--destination" draggable="true">
+                        <div class="route-stop-body">
+                            <label>Destino <span class="required-indicator">*</span></label>
+                            <select id="toLocation" required>
+                                <option value="" disabled selected>Selecciona un destino</option>
+                                @foreach (var loc in orderedLocations)
+                                {
+                                    <option value="@loc.Id">@loc.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <button type="button" class="route-stop-remove" aria-label="Eliminar parada">
+                            <span class="material-symbols-rounded">close</span>
+                        </button>
+                        <div class="route-stop-handle"></div>
+                    </div>
+                </div>
+                <div class="route-stop-add">
+                    <label for="addStopSelect">Agregar parada</label>
+                    <select id="addStopSelect">
+                        <option value="">Selecciona un punto intermedio</option>
+                        @foreach (var loc in orderedLocations)
+                        {
+                            <option value="@loc.Id">@loc.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <script type="text/template" id="route-location-options">
+                <option value="" disabled selected>Selecciona un lugar</option>
+                @foreach (var loc in orderedLocations)
+                {
+                    <option value="@loc.Id">@loc.Name</option>
+                }
+            </script>
         </aside>
         <div class="map-area">
             <div id="map"></div>

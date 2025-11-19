@@ -31,11 +31,8 @@ app.MapRazorPages()
 
 app.MapPost("/api/routes", async (RouteRequest request, LocationService locationService, RoutePlanner routePlanner, CancellationToken cancellationToken) =>
 {
-    var locations = locationService.GetLocations().ToList();
-    var from = locations.FirstOrDefault(l => l.Id == request.FromId);
-    var to = locations.FirstOrDefault(l => l.Id == request.ToId);
-
-    if (from == null || to == null)
+    var locations = locationService.GetLocations().ToDictionary(l => l.Id);
+    if (!locations.TryGetValue(request.FromId, out var from) || !locations.TryGetValue(request.ToId, out var to))
     {
         return Results.BadRequest(new RouteResponseDto
         {
@@ -44,22 +41,46 @@ app.MapPost("/api/routes", async (RouteRequest request, LocationService location
         });
     }
 
-    var result = await routePlanner.BuildRouteAsync(from, to, cancellationToken);
-    if (!result.Success)
+    var orderedPoints = new List<Location> { from };
+    if (request.Stops is { Count: > 0 })
     {
-        return Results.Ok(new RouteResponseDto
+        foreach (var stopId in request.Stops)
         {
-            Success = false,
-            Message = result.Message
-        });
+            if (locations.TryGetValue(stopId, out var stop))
+            {
+                orderedPoints.Add(stop);
+            }
+        }
+    }
+    orderedPoints.Add(to);
+
+    var aggregatedSegments = new List<RouteSegmentDto>();
+    double totalDistance = 0;
+    double totalDuration = 0;
+
+    for (int i = 0; i < orderedPoints.Count - 1; i++)
+    {
+        var segmentResult = await routePlanner.BuildRouteAsync(orderedPoints[i], orderedPoints[i + 1], cancellationToken);
+        if (!segmentResult.Success)
+        {
+            return Results.Ok(new RouteResponseDto
+            {
+                Success = false,
+                Message = segmentResult.Message
+            });
+        }
+
+        aggregatedSegments.AddRange(segmentResult.Segments);
+        totalDistance += segmentResult.DistanceKm;
+        totalDuration += segmentResult.DurationMinutes;
     }
 
     return Results.Ok(new RouteResponseDto
     {
         Success = true,
-        DistanceKm = result.DistanceKm,
-        DurationMinutes = result.DurationMinutes,
-        Segments = result.Segments
+        DistanceKm = totalDistance,
+        DurationMinutes = totalDuration,
+        Segments = aggregatedSegments
     });
 });
 

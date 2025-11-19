@@ -1,15 +1,12 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize the map centered on Cancun
     var map = L.map('map').setView([21.1619, -86.8515], 10);
     map.createPane('routePane');
     map.getPane('routePane').style.zIndex = 700;
 
-    // Add OpenStreetMap tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // Category-based icon configuration using Material Symbols
     const categoryStyles = {
         "Playa": { className: "marker-beach", icon: "beach_access" },
         "Hotel": { className: "marker-hotel", icon: "hotel" },
@@ -24,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function () {
         "Aeropuerto": "https://images.unsplash.com/photo-1504198458649-3128b932f49b?auto=format&fit=crop&w=900&q=80",
         "default": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80"
     };
+
     const markers = [];
     const locationLookup = {};
     let selectedMarker = null;
@@ -35,6 +33,11 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="metric-title">Resumen del trayecto</div>
         <div class="metric-placeholder">Selecciona origen y destino para ver la distancia.</div>
     `;
+    const routeList = document.getElementById('routeList');
+    const addStopSelect = document.getElementById('addStopSelect');
+    const locationOptionsTemplate = document.getElementById('route-location-options');
+    const locationOptionsHtml = locationOptionsTemplate ? locationOptionsTemplate.innerHTML : '';
+    let draggedStop = null;
 
     function getCategoryIcon(type) {
         const style = categoryStyles[type] || categoryStyles["default"];
@@ -91,6 +94,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function getStopIds() {
+        if (!routeList) return [];
+        return Array.from(routeList.querySelectorAll('.route-stop--stop select'))
+            .map(select => select.value)
+            .filter(Boolean);
+    }
+
     function drawRouteIfReady() {
         if (!selectedFromId || !selectedToId || selectedFromId === selectedToId) {
             clearRoute();
@@ -100,12 +110,14 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        const stopIds = getStopIds();
+
         fetch('/api/routes', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ fromId: selectedFromId, toId: selectedToId })
+            body: JSON.stringify({ fromId: selectedFromId, toId: selectedToId, stops: stopIds })
         })
             .then(response => response.ok ? response.json() : null)
             .then(data => {
@@ -175,6 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function drawFallbackRoute() {
+        if (!selectedFromId || !selectedToId) return;
         const from = locationLookup[selectedFromId];
         const to = locationLookup[selectedToId];
         if (!from || !to) return;
@@ -254,7 +267,146 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Function to add markers from data
+    function initializeRouteStops() {
+        if (!routeList) return;
+        refreshRouteStopRoles();
+
+        if (addStopSelect) {
+            addStopSelect.addEventListener('change', function () {
+                if (!this.value) return;
+                addIntermediateStop(this.value);
+                this.selectedIndex = 0;
+            });
+        }
+    }
+
+    function refreshRouteStopRoles() {
+        if (!routeList) return;
+        const stops = Array.from(routeList.querySelectorAll('.route-stop'));
+        stops.forEach((stop, index) => {
+            stop.classList.remove('route-stop--origin', 'route-stop--destination', 'route-stop--stop');
+            const label = stop.querySelector('label');
+            const select = stop.querySelector('select');
+            const removeButton = stop.querySelector('.route-stop-remove');
+            select.removeAttribute('id');
+
+            if (index === 0) {
+                stop.classList.add('route-stop--origin');
+                label.innerHTML = 'Origen <span class="required-indicator">*</span>';
+                select.id = 'fromLocation';
+                selectedFromId = select.value || null;
+                if (removeButton) {
+                    removeButton.style.visibility = 'hidden';
+                }
+            } else if (index === stops.length - 1) {
+                stop.classList.add('route-stop--destination');
+                label.innerHTML = 'Destino <span class="required-indicator">*</span>';
+                select.id = 'toLocation';
+                selectedToId = select.value || null;
+                if (removeButton) {
+                    removeButton.style.visibility = 'hidden';
+                }
+            } else {
+                stop.classList.add('route-stop--stop');
+                label.textContent = 'Parada';
+                if (removeButton) {
+                    removeButton.style.visibility = 'visible';
+                }
+            }
+
+            attachStopEvents(stop);
+        });
+
+        attachRouteSelectListeners();
+    }
+
+    function attachRouteSelectListeners() {
+        if (!routeList) return;
+        const selects = routeList.querySelectorAll('.route-stop select');
+        selects.forEach(select => {
+            select.onchange = function () {
+                if (this.id === 'fromLocation') {
+                    selectedFromId = this.value;
+                    focusLocationById(selectedFromId);
+                } else if (this.id === 'toLocation') {
+                    selectedToId = this.value;
+                }
+                drawRouteIfReady();
+            };
+        });
+    }
+
+    function addIntermediateStop(value) {
+        if (!routeList) return;
+        const stop = document.createElement('div');
+        stop.className = 'route-stop route-stop--stop';
+        stop.setAttribute('draggable', 'true');
+        stop.innerHTML = `
+            <div class="route-stop-body">
+                <label>Parada</label>
+            </div>
+            <button type="button" class="route-stop-remove" aria-label="Eliminar parada">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <div class="route-stop-handle"></div>
+        `;
+
+        const select = document.createElement('select');
+        select.innerHTML = locationOptionsHtml;
+        select.value = value;
+        select.required = true;
+        stop.querySelector('.route-stop-body').appendChild(select);
+        routeList.insertBefore(stop, routeList.lastElementChild);
+        refreshRouteStopRoles();
+        drawRouteIfReady();
+    }
+
+    function attachStopEvents(stop) {
+        if (!stop || stop.dataset.bound) return;
+        stop.addEventListener('dragstart', handleDragStart);
+        stop.addEventListener('dragover', handleDragOver);
+        stop.addEventListener('drop', handleDrop);
+        stop.addEventListener('dragend', handleDragEnd);
+        const removeButton = stop.querySelector('.route-stop-remove');
+        if (removeButton) {
+            removeButton.addEventListener('click', () => {
+                if (routeList.children.length > 2) {
+                    stop.remove();
+                    refreshRouteStopRoles();
+                    drawRouteIfReady();
+                }
+            });
+        }
+        stop.dataset.bound = 'true';
+    }
+
+    function handleDragStart(e) {
+        draggedStop = e.currentTarget;
+        e.dataTransfer.effectAllowed = 'move';
+        e.currentTarget.classList.add('dragging');
+    }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        const target = e.currentTarget;
+        if (!draggedStop || target === draggedStop) return;
+        const rect = target.getBoundingClientRect();
+        const offset = e.clientY - rect.top;
+        const insertAfter = offset > rect.height / 2;
+        routeList.insertBefore(draggedStop, insertAfter ? target.nextSibling : target);
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+    }
+
+    function handleDragEnd(e) {
+        e.currentTarget.classList.remove('dragging');
+        draggedStop = null;
+        refreshRouteStopRoles();
+        drawRouteIfReady();
+    }
+
     window.initMapMarkers = function (locations) {
         locations.forEach(function (loc) {
             locationLookup[loc.id] = loc;
@@ -265,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!imageUrl || imageUrl.includes('example.com')) {
                 imageUrl = categoryImageFallback[loc.type] || categoryImageFallback["default"];
             }
-            
+
             var popupContent = `
                 <div class="popup-content">
                     <div class="popup-cover" style="background-image: url('${imageUrl}');">
@@ -284,27 +436,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         applyMarkerScale();
 
-        var fromSelect = document.getElementById('fromLocation');
-        if (fromSelect) {
-            fromSelect.addEventListener('change', function () {
-                selectedFromId = this.value;
-                focusLocationById(selectedFromId);
-                drawRouteIfReady();
-            });
-        }
-
-        var toSelect = document.getElementById('toLocation');
-        if (toSelect) {
-            toSelect.addEventListener('change', function () {
-                selectedToId = this.value;
-                drawRouteIfReady();
-            });
-        }
-
         distanceControl = document.querySelector('.distance-indicator');
         if (distanceControl) {
             distanceControl.innerHTML = distancePlaceholder;
         }
+
+        initializeRouteStops();
+        drawRouteIfReady();
     };
 
     map.on('zoomend', applyMarkerScale);

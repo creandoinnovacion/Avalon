@@ -6,6 +6,7 @@ public class RouteRequest
 {
     public string FromId { get; set; } = string.Empty;
     public string ToId { get; set; } = string.Empty;
+    public List<string> Stops { get; set; } = new();
 }
 
 public class RouteSegmentDto
