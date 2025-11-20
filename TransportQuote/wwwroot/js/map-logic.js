@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const locationOptionsHtml = locationOptionsTemplate ? locationOptionsTemplate.innerHTML : '';
     const landVehicleSelect = document.getElementById('landVehicle');
     const landSeatsInput = document.getElementById('landSeats');
+    const landDateInput = document.getElementById('landDate');
     const landDepartureInput = document.getElementById('landDeparture');
     const seaSeatsInput = document.getElementById('seaSeats');
     const seaDepartureInput = document.getElementById('seaDeparture');
@@ -697,9 +698,38 @@ document.addEventListener('DOMContentLoaded', function () {
         const select = e.target.closest('select');
         if (!select) return;
         select.classList.remove('select-invalid');
+
+        if (select.id === 'fromLocation') {
+            selectedFromId = select.value || null;
+            if (selectedFromId) {
+                focusLocationById(selectedFromId);
+            }
+        } else if (select.id === 'toLocation') {
+            selectedToId = select.value || null;
+        }
+
+        drawRouteIfReady();
     });
 
-    [landVehicleSelect, landSeatsInput, landDepartureInput, seaSeatsInput, seaDepartureInput].forEach(element => {
+    if (landDateInput) {
+        const today = new Date();
+        const isoDate = today.toISOString().split('T')[0];
+        landDateInput.min = isoDate;
+        if (!landDateInput.value) {
+            landDateInput.value = isoDate;
+        }
+    }
+
+    if (landDepartureInput) {
+        const now = new Date();
+        const isoTime = now.toISOString().split('T')[1].slice(0, 5);
+        landDepartureInput.min = isoTime;
+        if (!landDepartureInput.value) {
+            landDepartureInput.value = isoTime;
+        }
+    }
+
+    [landVehicleSelect, landSeatsInput, landDateInput, landDepartureInput, seaSeatsInput, seaDepartureInput].forEach(element => {
         element?.addEventListener('change', () => updateQuoteSummary());
     });
 
