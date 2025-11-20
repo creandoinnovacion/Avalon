@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TransportQuote")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+289bd09b3ff694c2ed33227ac89c7d98d4729f48")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d73505e272b521a4706edf447bf41e1d99f15404")]
 [assembly: System.Reflection.AssemblyProductAttribute("TransportQuote")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TransportQuote")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

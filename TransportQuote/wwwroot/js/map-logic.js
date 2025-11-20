@@ -737,6 +737,18 @@ document.addEventListener('DOMContentLoaded', function () {
         element?.addEventListener('change', () => updateQuoteSummary());
     });
 
+    landSeatsInput?.addEventListener('input', function () {
+        const value = parseInt(this.value, 10) || 0;
+        seaSeatsInput.value = Math.max(value, 0);
+        updateQuoteSummary();
+    });
+
+    seaSeatsInput?.addEventListener('input', function () {
+        const value = parseInt(this.value, 10) || 0;
+        landSeatsInput.value = Math.max(value, 0);
+        updateQuoteSummary();
+    });
+
     quotePanelClose?.addEventListener('click', () => {
         quotePanel?.classList.add('hidden');
     });
