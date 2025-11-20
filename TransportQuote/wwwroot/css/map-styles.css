@@ -165,6 +165,45 @@ body, html {
     background-repeat: no-repeat;
 }
 
+.seat-map {
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(32px, 1fr));
+    gap: 6px;
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(245, 247, 250, 0.9);
+    border: 1px solid rgba(20, 28, 38, 0.1);
+}
+
+.seat-map .seat {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: rgba(0, 122, 255, 0.15);
+    color: rgba(0, 40, 85, 0.7);
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 1px solid rgba(0, 122, 255, 0.3);
+    transition: background 0.2s ease, border 0.2s ease;
+}
+
+.seat-map .seat.selected {
+    background: rgba(0, 122, 255, 0.9);
+    border-color: rgba(0, 122, 255, 1);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0, 122, 255, 0.35);
+}
+
+.seat-map .seat.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: rgba(20, 28, 38, 0.05);
+}
 .quote-field select option {
     font-family: inherit;
 }
