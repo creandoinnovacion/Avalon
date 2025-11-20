@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const marker = entry.marker;
         const el = marker.getElement();
         if (!el) return;
-        const shouldShow = !categoryFilter || activeCategories.size === 0 || activeCategories.has(entry.type);
+        const shouldShow = !categoryFilter ? true : activeCategories.has(entry.type);
         el.style.display = shouldShow ? '' : 'none';
     }
 
@@ -749,7 +749,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     };
 
-    map.on('zoomend', applyMarkerScale);
+    map.on('zoomend', () => {
+        applyMarkerScale();
+        updateMarkerVisibility();
+    });
     updateQuoteSections();
 
     if (quoteButton) {
