@@ -65,6 +65,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const cardExpiryInput = document.getElementById('cardExpiry');
     const cardCvvInput = document.getElementById('cardCvv');
     const cardEmailInput = document.getElementById('cardEmail');
+    const categoryFilter = document.getElementById('mapCategoryFilter');
+    const activeCategories = new Set();
 
     const vehicleRates = {
         camioneta: { label: 'Camioneta', ratePerKm: 32, baseFee: 180, seatFee: 6 },
@@ -363,13 +365,60 @@ document.addEventListener('DOMContentLoaded', function () {
             scale = 1;
         }
 
-        markers.forEach(function (marker) {
+        markers.forEach(function (entry) {
+            const marker = entry.marker;
             const el = marker.getElement();
             if (el) {
                 el.style.setProperty('--marker-scale', scale);
             }
         });
     }
+
+    function updateMarkerVisibility() {
+        markers.forEach(entry => {
+            setMarkerVisibility(entry);
+        });
+    }
+
+    function setMarkerVisibility(entry) {
+        const marker = entry.marker;
+        const el = marker.getElement();
+        if (!el) return;
+        const shouldShow = !categoryFilter || activeCategories.size === 0 || activeCategories.has(entry.type);
+        el.style.display = shouldShow ? '' : 'none';
+    }
+
+    function initializeCategoryFilter() {
+        if (!categoryFilter) return;
+        const chips = categoryFilter.querySelectorAll('.filter-chip');
+        chips.forEach(chip => {
+            const category = chip.dataset.category;
+            if (!category) return;
+            if (chip.classList.contains('active')) {
+                activeCategories.add(category);
+            }
+            chip.addEventListener('click', () => {
+                const nowActive = chip.classList.toggle('active');
+                if (nowActive) {
+                    activeCategories.add(category);
+                } else {
+                    activeCategories.delete(category);
+                }
+                updateMarkerVisibility();
+            });
+        });
+        if (activeCategories.size === 0) {
+            chips.forEach(chip => {
+                const category = chip.dataset.category;
+                if (category) {
+                    activeCategories.add(category);
+                    chip.classList.add('active');
+                }
+            });
+        }
+    }
+
+    initializeCategoryFilter();
 
     function initializeRouteStops() {
         if (!routeList) return;
@@ -642,7 +691,8 @@ document.addEventListener('DOMContentLoaded', function () {
         locations.forEach(function (loc) {
             locationLookup[loc.id] = loc;
             var marker = L.marker([loc.latitude, loc.longitude], { icon: getCategoryIcon(loc.type) }).addTo(map);
-            markers.push(marker);
+            const entry = { marker, type: loc.type };
+            markers.push(entry);
 
             var imageUrl = loc.imageUrl;
             if (!imageUrl || imageUrl.includes('example.com')) {
@@ -668,9 +718,13 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
 
             marker.bindPopup(popupContent);
-            marker.on('add', applyMarkerScale);
+            marker.on('add', () => {
+                applyMarkerScale();
+                setMarkerVisibility(entry);
+            });
         });
         applyMarkerScale();
+        updateMarkerVisibility();
 
         distanceControl = document.querySelector('.distance-indicator');
         if (distanceControl) {
@@ -746,6 +800,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!landDepartureInput.value) {
             landDepartureInput.value = isoTime;
         }
+        enforceHalfHourInterval(landDepartureInput);
     }
 
     [landVehicleSelect, landSeatsInput, landDateInput, landDepartureInput, seaSeatTypeSelect, seaSeatsInput, seaDepartureInput].forEach(element => {
@@ -754,6 +809,14 @@ document.addEventListener('DOMContentLoaded', function () {
             element.classList?.remove('select-invalid');
             updateQuoteSummary();
         });
+    });
+
+    [landDepartureInput, seaDepartureInput].forEach(input => {
+        input?.addEventListener('change', () => {
+            enforceHalfHourInterval(input);
+            input.classList.remove('input-invalid');
+        });
+        input?.addEventListener('blur', () => enforceHalfHourInterval(input));
     });
 
     landSeatsInput?.addEventListener('input', function () {
@@ -885,6 +948,32 @@ document.addEventListener('DOMContentLoaded', function () {
         const valid = !isNaN(val) && val > 0;
         input.classList.toggle('input-invalid', !valid);
         return valid;
+    }
+
+    function enforceHalfHourInterval(input) {
+        if (!input || !input.value) return;
+        const rounded = roundToNextHalfHour(input.value);
+        if (rounded) {
+            input.value = rounded;
+        }
+    }
+
+    function roundToNextHalfHour(value) {
+        if (!value || value.indexOf(':') === -1) return value;
+        const [hourPart, minutePart] = value.split(':');
+        let hours = parseInt(hourPart, 10);
+        let minutes = parseInt(minutePart, 10);
+        if (isNaN(hours)) hours = 0;
+        if (isNaN(minutes)) minutes = 0;
+        let totalMinutes = hours * 60 + minutes;
+        totalMinutes = Math.ceil(totalMinutes / 30) * 30;
+        const minutesPerDay = 24 * 60;
+        if (totalMinutes >= minutesPerDay) {
+            totalMinutes = totalMinutes % minutesPerDay;
+        }
+        const roundedHours = Math.floor(totalMinutes / 60);
+        const roundedMinutes = totalMinutes % 60;
+        return `${roundedHours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
     }
 
     function setFieldError(input, message) {
