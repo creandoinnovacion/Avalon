@@ -690,8 +690,9 @@ body, html {
     box-sizing: border-box;
 }
 
-.select-invalid {
-    border-color: rgba(255, 59, 48, 0.9);
+select.select-invalid,
+input.input-invalid {
+    border-color: rgba(255, 59, 48, 0.9) !important;
     box-shadow: 0 0 0 1px rgba(255, 59, 48, 0.4);
 }
 

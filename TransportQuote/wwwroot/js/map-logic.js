@@ -700,7 +700,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (quoteButton) {
         quoteButton.addEventListener('click', function () {
-            validateRequiredFields();
+            if (validateRequiredFields()) {
+                quotePanel?.classList.remove('hidden');
+                updateQuoteSections();
+            }
         });
     }
 
@@ -746,18 +749,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     [landVehicleSelect, landSeatsInput, landDateInput, landDepartureInput, seaSeatTypeSelect, seaSeatsInput, seaDepartureInput].forEach(element => {
-        element?.addEventListener('change', () => updateQuoteSummary());
+        element?.addEventListener('change', () => {
+            element.classList?.remove('input-invalid');
+            element.classList?.remove('select-invalid');
+            updateQuoteSummary();
+        });
     });
 
     landSeatsInput?.addEventListener('input', function () {
         const value = parseInt(this.value, 10) || 0;
         seaSeatsInput.value = Math.max(value, 0);
+        this.classList.remove('input-invalid');
+        seaSeatsInput?.classList.remove('input-invalid');
         updateQuoteSummary();
     });
 
     seaSeatsInput?.addEventListener('input', function () {
         const value = parseInt(this.value, 10) || 0;
         landSeatsInput.value = Math.max(value, 0);
+        this.classList.remove('input-invalid');
+        landSeatsInput?.classList.remove('input-invalid');
         updateQuoteSummary();
     });
 
@@ -776,8 +787,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     quoteConfirmButton?.addEventListener('click', () => {
-        if (!currentRouteData) {
-            validateRequiredFields();
+        const requiredValid = validateRequiredFields();
+        const detailsValid = validateQuoteDetails();
+        if (!currentRouteData || !requiredValid || !detailsValid) {
             return;
         }
         resetPaymentForm();
@@ -820,23 +832,59 @@ document.addEventListener('DOMContentLoaded', function () {
         const fromSelect = document.getElementById('fromLocation');
         const toSelect = document.getElementById('toLocation');
 
-        if (serviceTypeSelect && !serviceTypeSelect.value) {
-            serviceTypeSelect.classList.add('select-invalid');
+        if (!ensureSelectValue(serviceTypeSelect)) {
             isValid = false;
         }
-        if (fromSelect && !fromSelect.value) {
-            fromSelect.classList.add('select-invalid');
+        if (!ensureSelectValue(fromSelect)) {
             isValid = false;
         }
-        if (toSelect && !toSelect.value) {
-            toSelect.classList.add('select-invalid');
+        if (!ensureSelectValue(toSelect)) {
             isValid = false;
         }
 
-        if (isValid) {
-            quotePanel?.classList.remove('hidden');
-            updateQuoteSections();
+        return isValid;
+    }
+
+    function validateQuoteDetails() {
+        let isValid = true;
+        const landVisible = landSection && !landSection.classList.contains('hidden');
+        const seaVisible = seaSection && !seaSection.classList.contains('hidden');
+
+        if (landVisible) {
+            if (!ensurePositiveNumber(landSeatsInput)) isValid = false;
+            if (!ensureInputValue(landDateInput)) isValid = false;
+            if (!ensureInputValue(landDepartureInput)) isValid = false;
         }
+
+        if (seaVisible) {
+            if (!ensureSelectValue(seaSeatTypeSelect)) isValid = false;
+            if (!ensurePositiveNumber(seaSeatsInput)) isValid = false;
+            if (!ensureInputValue(seaDepartureInput)) isValid = false;
+        }
+
+        return isValid;
+    }
+
+    function ensureSelectValue(select) {
+        if (!select) return true;
+        const hasValue = Boolean(select.value);
+        select.classList.toggle('select-invalid', !hasValue);
+        return hasValue;
+    }
+
+    function ensureInputValue(input) {
+        if (!input) return true;
+        const hasValue = Boolean(input.value);
+        input.classList.toggle('input-invalid', !hasValue);
+        return hasValue;
+    }
+
+    function ensurePositiveNumber(input) {
+        if (!input) return true;
+        const val = parseInt(input.value, 10);
+        const valid = !isNaN(val) && val > 0;
+        input.classList.toggle('input-invalid', !valid);
+        return valid;
     }
 
     function setFieldError(input, message) {
