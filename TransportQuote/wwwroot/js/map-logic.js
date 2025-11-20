@@ -53,6 +53,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const landSection = document.getElementById('landQuoteSection');
     const seaSection = document.getElementById('seaQuoteSection');
     const quoteSummary = document.getElementById('quoteSummary');
+    const quoteConfirmButton = document.querySelector('.quote-confirm');
+    const paymentPanel = document.getElementById('paymentPanel');
+    const paymentPanelClose = document.querySelector('.payment-panel-close');
+    const paymentForm = document.getElementById('paymentForm');
+    const paymentCancelButton = document.querySelector('.payment-cancel');
+    const paymentSubmitButton = document.querySelector('.payment-submit');
+    const paymentFeedback = document.getElementById('paymentFeedback');
+    const cardNameInput = document.getElementById('cardName');
+    const cardNumberInput = document.getElementById('cardNumber');
+    const cardExpiryInput = document.getElementById('cardExpiry');
+    const cardCvvInput = document.getElementById('cardCvv');
+    const cardEmailInput = document.getElementById('cardEmail');
 
     const vehicleRates = {
         camioneta: { label: 'Camioneta', ratePerKm: 32, baseFee: 180, seatFee: 6 },
@@ -753,6 +765,56 @@ document.addEventListener('DOMContentLoaded', function () {
         quotePanel?.classList.add('hidden');
     });
 
+    paymentPanelClose?.addEventListener('click', () => {
+        paymentPanel?.classList.add('hidden');
+        resetPaymentForm();
+    });
+
+    paymentCancelButton?.addEventListener('click', () => {
+        paymentPanel?.classList.add('hidden');
+        resetPaymentForm();
+    });
+
+    quoteConfirmButton?.addEventListener('click', () => {
+        if (!currentRouteData) {
+            validateRequiredFields();
+            return;
+        }
+        resetPaymentForm();
+        paymentPanel?.classList.remove('hidden');
+        togglePaymentSubmitState();
+    });
+
+    paymentForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (validatePaymentFields()) {
+            if (paymentFeedback) {
+                paymentFeedback.textContent = 'Pago confirmado. ¡Tu traslado ha quedado reservado!';
+                paymentFeedback.classList.add('success');
+            }
+            paymentForm.reset();
+            togglePaymentSubmitState();
+            setTimeout(() => {
+                paymentPanel?.classList.add('hidden');
+                resetPaymentForm();
+            }, 1200);
+        }
+    });
+
+    [cardNameInput, cardNumberInput, cardExpiryInput, cardCvvInput, cardEmailInput].forEach(input => {
+        input?.addEventListener('input', () => {
+            if (input === cardNumberInput) {
+                formatCardNumber();
+            } else if (input === cardExpiryInput) {
+                formatExpiry();
+            } else if (input === cardCvvInput) {
+                cardCvvInput.value = cardCvvInput.value.replace(/\D/g, '').slice(0, 4);
+            }
+            clearFieldError(input);
+            togglePaymentSubmitState();
+        });
+    });
+
     function validateRequiredFields() {
         let isValid = true;
         const fromSelect = document.getElementById('fromLocation');
@@ -775,5 +837,132 @@ document.addEventListener('DOMContentLoaded', function () {
             quotePanel?.classList.remove('hidden');
             updateQuoteSections();
         }
+    }
+
+    function setFieldError(input, message) {
+        if (!input) return;
+        input.classList.toggle('invalid', Boolean(message));
+        const errorEl = document.querySelector(`.field-error[data-for="${input.id}"]`);
+        if (errorEl) {
+            errorEl.textContent = message || '';
+        }
+    }
+
+    function clearFieldError(input) {
+        setFieldError(input, '');
+    }
+
+    function togglePaymentSubmitState() {
+        if (!paymentSubmitButton) return;
+        const fields = [cardNameInput, cardNumberInput, cardExpiryInput, cardCvvInput, cardEmailInput];
+        const filled = fields.every(field => field && field.value.trim().length > 0);
+        paymentSubmitButton.disabled = !filled;
+    }
+
+    function resetPaymentForm() {
+        paymentForm?.reset();
+        [cardNameInput, cardNumberInput, cardExpiryInput, cardCvvInput, cardEmailInput].forEach(input => {
+            if (input) {
+                input.classList.remove('invalid');
+            }
+        });
+        paymentPanel?.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+        if (paymentFeedback) {
+            paymentFeedback.textContent = '';
+            paymentFeedback.classList.remove('success');
+        }
+    }
+
+    function formatCardNumber() {
+        if (!cardNumberInput) return;
+        const digits = cardNumberInput.value.replace(/\D/g, '').slice(0, 19);
+        cardNumberInput.value = digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    }
+
+    function formatExpiry() {
+        if (!cardExpiryInput) return;
+        const digits = cardExpiryInput.value.replace(/\D/g, '').slice(0, 4);
+        if (digits.length >= 3) {
+            cardExpiryInput.value = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+        } else {
+            cardExpiryInput.value = digits;
+        }
+    }
+
+    function luhnCheck(number) {
+        let sum = 0;
+        let shouldDouble = false;
+        for (let i = number.length - 1; i >= 0; i--) {
+            let digit = parseInt(number.charAt(i), 10);
+            if (shouldDouble) {
+                digit *= 2;
+                if (digit > 9) digit -= 9;
+            }
+            sum += digit;
+            shouldDouble = !shouldDouble;
+        }
+        return sum % 10 === 0;
+    }
+
+    function validatePaymentFields() {
+        let valid = true;
+        const name = cardNameInput?.value.trim() || '';
+        const cardNumber = (cardNumberInput?.value || '').replace(/\s+/g, '');
+        const expiry = cardExpiryInput?.value.trim() || '';
+        const cvv = (cardCvvInput?.value || '').replace(/\D/g, '');
+        const email = cardEmailInput?.value.trim() || '';
+
+        if (!name) {
+            setFieldError(cardNameInput, 'Ingresa el titular de la tarjeta.');
+            valid = false;
+        } else {
+            clearFieldError(cardNameInput);
+        }
+
+        if (!cardNumber || cardNumber.length < 13 || cardNumber.length > 19 || !luhnCheck(cardNumber)) {
+            setFieldError(cardNumberInput, 'Número de tarjeta no válido.');
+            valid = false;
+        } else {
+            clearFieldError(cardNumberInput);
+        }
+
+        if (cardExpiryInput) {
+            if (!/^\d{2}\/\d{2}$/.test(expiry)) {
+                setFieldError(cardExpiryInput, 'Formato inválido (MM/AA).');
+                valid = false;
+            } else {
+                const month = parseInt(expiry.slice(0, 2), 10);
+                const year = parseInt(`20${expiry.slice(3)}`, 10);
+                if (month < 1 || month > 12) {
+                    setFieldError(cardExpiryInput, 'Mes inválido.');
+                    valid = false;
+                } else {
+                    const now = new Date();
+                    const validThrough = new Date(year, month, 0, 23, 59, 59);
+                    if (now > validThrough) {
+                        setFieldError(cardExpiryInput, 'La tarjeta está expirada.');
+                        valid = false;
+                    } else {
+                        clearFieldError(cardExpiryInput);
+                    }
+                }
+            }
+        }
+
+        if (!cvv || cvv.length < 3 || cvv.length > 4) {
+            setFieldError(cardCvvInput, 'CVV inválido.');
+            valid = false;
+        } else {
+            clearFieldError(cardCvvInput);
+        }
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            setFieldError(cardEmailInput, 'Ingresa un correo válido.');
+            valid = false;
+        } else {
+            clearFieldError(cardEmailInput);
+        }
+
+        return valid;
     }
 });
