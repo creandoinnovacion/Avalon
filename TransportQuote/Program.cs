@@ -54,6 +54,17 @@ app.MapPost("/api/routes", async (RouteRequest request, LocationService location
     }
     orderedPoints.Add(to);
 
+    Console.WriteLine($"[Route] Origen: {from.Name} ({from.Latitude}, {from.Longitude})");
+    Console.WriteLine($"[Route] Destino: {to.Name} ({to.Latitude}, {to.Longitude})");
+    if (request.Stops is { Count: > 0 })
+    {
+        Console.WriteLine("[Route] Paradas:");
+        foreach (var stop in orderedPoints.Skip(1).Take(orderedPoints.Count - 2))
+        {
+            Console.WriteLine($" - {stop.Name} ({stop.Latitude}, {stop.Longitude})");
+        }
+    }
+
     var aggregatedSegments = new List<RouteSegmentDto>();
     double totalDistance = 0;
     double totalDuration = 0;
