@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const landSeatsInput = document.getElementById('landSeats');
     const landDateInput = document.getElementById('landDate');
     const landDepartureInput = document.getElementById('landDeparture');
+    const seaSeatTypeSelect = document.getElementById('seaSeatType');
     const seaSeatsInput = document.getElementById('seaSeats');
     const seaDepartureInput = document.getElementById('seaDeparture');
     const landSection = document.getElementById('landQuoteSection');
@@ -546,9 +547,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (seaDistance > 0 && seaSection && !seaSection.classList.contains('hidden')) {
             const seatsSea = parseInt(seaSeatsInput?.value || '0', 10) || 0;
-            const seaCost = ferryRates.baseFee + ferryRates.ratePerKm * seaDistance + Math.max(seatsSea, 0) * ferryRates.seatFee;
+            const seatType = seaSeatTypeSelect?.value || 'estandar';
+            const seatMultiplier = seatType === 'premium' ? 1.35 : seatType === 'vip' ? 1.6 : 1;
+            const seatFee = ferryRates.seatFee * seatMultiplier;
+            const seaCost = ferryRates.baseFee + ferryRates.ratePerKm * seaDistance + Math.max(seatsSea, 0) * seatFee;
             summaryLines.push({
-                label: 'Transporte marítimo (ferri)',
+                label: `Transporte marítimo (${seatType})`,
                 info: `${seaDistance.toFixed(1)} km`,
                 value: seaCost
             });
@@ -729,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    [landVehicleSelect, landSeatsInput, landDateInput, landDepartureInput, seaSeatsInput, seaDepartureInput].forEach(element => {
+    [landVehicleSelect, landSeatsInput, landDateInput, landDepartureInput, seaSeatTypeSelect, seaSeatsInput, seaDepartureInput].forEach(element => {
         element?.addEventListener('change', () => updateQuoteSummary());
     });
 
