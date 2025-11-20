@@ -175,32 +175,34 @@
                 </button>
             </div>
             <form class="payment-panel-body" id="paymentForm" novalidate>
-                <div class="payment-field">
-                    <label for="cardName">Nombre en la tarjeta</label>
-                    <input type="text" id="cardName" autocomplete="cc-name" placeholder="Como aparece en la tarjeta" required />
-                    <small class="field-error" data-for="cardName"></small>
-                </div>
-                <div class="payment-field">
-                    <label for="cardNumber">Número de tarjeta</label>
-                    <input type="text" id="cardNumber" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="0000 0000 0000 0000" required />
-                    <small class="field-error" data-for="cardNumber"></small>
-                </div>
-                <div class="payment-field payment-field--split">
-                    <div>
-                        <label for="cardExpiry">MM/AA</label>
-                        <input type="text" id="cardExpiry" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA" required />
-                        <small class="field-error" data-for="cardExpiry"></small>
+                <div class="payment-section">
+                    <div class="payment-section-grid">
+                        <div class="payment-field grid-span-2">
+                            <label for="cardName">Nombre en la tarjeta</label>
+                            <input type="text" id="cardName" autocomplete="cc-name" placeholder="Como aparece en la tarjeta" required />
+                            <small class="field-error" data-for="cardName"></small>
+                        </div>
+                        <div class="payment-field grid-span-2">
+                            <label for="cardNumber">Número de tarjeta</label>
+                            <input type="text" id="cardNumber" inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="0000 0000 0000 0000" required />
+                            <small class="field-error" data-for="cardNumber"></small>
+                        </div>
+                        <div class="payment-field">
+                            <label for="cardExpiry">MM/AA</label>
+                            <input type="text" id="cardExpiry" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA" required />
+                            <small class="field-error" data-for="cardExpiry"></small>
+                        </div>
+                        <div class="payment-field">
+                            <label for="cardCvv">CVV</label>
+                            <input type="password" id="cardCvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="***" required />
+                            <small class="field-error" data-for="cardCvv"></small>
+                        </div>
+                        <div class="payment-field grid-span-2">
+                            <label for="cardEmail">Correo para el recibo</label>
+                            <input type="email" id="cardEmail" autocomplete="email" placeholder="nombre@ejemplo.com" required />
+                            <small class="field-error" data-for="cardEmail"></small>
+                        </div>
                     </div>
-                    <div>
-                        <label for="cardCvv">CVV</label>
-                        <input type="password" id="cardCvv" inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="***" required />
-                        <small class="field-error" data-for="cardCvv"></small>
-                    </div>
-                </div>
-                <div class="payment-field">
-                    <label for="cardEmail">Correo para el recibo</label>
-                    <input type="email" id="cardEmail" autocomplete="email" placeholder="nombre@ejemplo.com" required />
-                    <small class="field-error" data-for="cardEmail"></small>
                 </div>
                 <div class="payment-feedback" id="paymentFeedback"></div>
                 <div class="payment-panel-actions">
