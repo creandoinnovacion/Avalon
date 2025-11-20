@@ -184,10 +184,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 currentRouteData = {
                     segments: data.segments,
                     distanceKm: data.distanceKm,
-                    durationMinutes: data.durationMinutes
+                    durationMinutes: data.durationMinutes,
+                    trafficDelayMinutes: data.trafficDelayMinutes || 0
                 };
                 renderRouteSegments(data.segments);
-                updateDistanceIndicator(data.distanceKm, data.durationMinutes);
+                updateDistanceIndicator(data.distanceKm, data.durationMinutes, data.trafficDelayMinutes || 0);
                 updateQuoteSections();
             })
             .catch(() => {
@@ -199,30 +200,49 @@ document.addEventListener('DOMContentLoaded', function () {
         clearRoute();
         clearMarkers();
         const bounds = [];
+        const landCoords = [];
+
+        function arraysEqual(a, b) {
+            return a && b && a.length === b.length && a.every((val, idx) => val === b[idx]);
+        }
+
+        function addLandPolyline() {
+            if (landCoords.length < 2) return;
+            const line = L.polyline(landCoords, {
+                color: '#0a84ff',
+                weight: 6,
+                opacity: 0.95,
+                pane: 'routePane'
+            }).addTo(map);
+            routeLayers.push(line);
+        }
 
         segments.forEach(segment => {
             const coords = segment.coordinates.map(pair => [pair[0], pair[1]]);
             if (!coords.length) return;
             bounds.push(...coords);
 
-            const style = segment.mode === 'sea'
-                ? {
+            if (segment.mode === 'sea') {
+                addLandPolyline();
+                landCoords.length = 0;
+                const seaLine = L.polyline(coords, {
                     color: '#18d4ff',
                     weight: 4,
                     opacity: 0.85,
                     dashArray: '10 8',
                     pane: 'routePane'
-                }
-                : {
-                    color: '#0a84ff',
-                    weight: 6,
-                    opacity: 0.95,
-                    pane: 'routePane'
-                };
-
-            const line = L.polyline(coords, style).addTo(map);
-            routeLayers.push(line);
+                }).addTo(map);
+                routeLayers.push(seaLine);
+            } else {
+                coords.forEach((point, index) => {
+                    if (landCoords.length && index === 0 && arraysEqual(landCoords[landCoords.length - 1], point)) {
+                        return;
+                    }
+                    landCoords.push(point);
+                });
+            }
         });
+        addLandPolyline();
 
         if (selectedFromId && locationLookup[selectedFromId]) {
             selectedMarker = L.marker([locationLookup[selectedFromId].latitude, locationLookup[selectedFromId].longitude], {
@@ -252,11 +272,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function updateDistanceIndicator(distanceKm, durationMinutes) {
+    function updateDistanceIndicator(distanceKm, durationMinutes, trafficDelayMinutes) {
         if (!distanceControl) return;
         const hours = Math.floor(durationMinutes / 60);
         const minutes = Math.round(durationMinutes % 60);
         const timeString = hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
+        const delay = Math.max(trafficDelayMinutes || 0, 0);
+        const delayLabel = delay <= 3 ? 'Fluido' : delay <= 10 ? 'Moderado' : 'Intenso';
+        const delayDetail = delay > 0 ? `+${delay.toFixed(1)} min` : 'Sin demoras';
 
         distanceControl.innerHTML = `
             <div class="metric-title">Resumen del trayecto</div>
@@ -267,6 +290,10 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="metric-row">
                 <div class="metric-label">Tiempo estimado</div>
                 <div class="metric-value">${timeString}</div>
+            </div>
+            <div class="metric-row">
+                <div class="metric-label">Tráfico</div>
+                <div class="metric-value">${delayLabel} <small>${delayDetail}</small></div>
             </div>
         `;
     }
@@ -305,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const distance = getDistanceInKm(from, to);
         const timeMinutes = estimateTravelMinutes(distance);
-        updateDistanceIndicator(distance, timeMinutes);
+        updateDistanceIndicator(distance, timeMinutes, 0);
 
         selectedMarker = L.marker([from.latitude, from.longitude], {
             icon: getPointIcon('origin'),
@@ -323,7 +350,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 distanceKm: distance
             }],
             distanceKm: distance,
-            durationMinutes: timeMinutes
+            durationMinutes: timeMinutes,
+            trafficDelayMinutes: 0
         };
         updateQuoteSections();
     }

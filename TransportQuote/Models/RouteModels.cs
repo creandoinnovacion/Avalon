@@ -17,6 +17,7 @@ public class RouteSegmentDto
     public List<double[]> Coordinates { get; set; } = new();
 
     public double DistanceKm { get; set; }
+    public double TrafficDelayMinutes { get; set; }
 }
 
 public class RouteResponseDto
@@ -25,5 +26,6 @@ public class RouteResponseDto
     public string? Message { get; set; }
     public double DistanceKm { get; set; }
     public double DurationMinutes { get; set; }
+    public double TrafficDelayMinutes { get; set; }
     public List<RouteSegmentDto> Segments { get; set; } = new();
 }

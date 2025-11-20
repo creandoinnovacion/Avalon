@@ -50,6 +50,7 @@ public class RoutePlanner
         var segments = new List<RouteSegmentDto>();
         double totalDistance = 0;
         double totalDuration = 0;
+        double totalDelay = 0;
 
         foreach (var step in plan)
         {
@@ -71,10 +72,12 @@ public class RoutePlanner
                 {
                     Mode = "land",
                     Coordinates = ConvertCoordinates(coordinates),
-                    DistanceKm = routeSegment.DistanceKm
+                    DistanceKm = routeSegment.DistanceKm,
+                    TrafficDelayMinutes = routeSegment.TrafficDelayMinutes
                 });
                 totalDistance += routeSegment.DistanceKm;
                 totalDuration += routeSegment.DurationMinutes;
+                totalDelay += routeSegment.TrafficDelayMinutes;
             }
             else if (step.Type == RouteStepType.Sea)
             {
@@ -83,7 +86,8 @@ public class RoutePlanner
                 {
                     Mode = "sea",
                     Coordinates = ConvertCoordinates(new List<GeoCoordinate> { step.Start, step.End }),
-                    DistanceKm = seaDistance
+                    DistanceKm = seaDistance,
+                    TrafficDelayMinutes = 0
                 });
 
                 totalDistance += seaDistance;
@@ -91,7 +95,7 @@ public class RoutePlanner
             }
         }
 
-        return RouteComputationResult.CreateSuccess(segments, totalDistance, totalDuration);
+        return RouteComputationResult.CreateSuccess(segments, totalDistance, totalDuration, totalDelay);
     }
 
     private static List<RoutePlanStep> BuildPlan(Landmass fromMass, Landmass toMass, GeoCoordinate from, GeoCoordinate to)
@@ -215,6 +219,7 @@ public class RouteComputationResult
     public string? Message { get; private set; }
     public double DistanceKm { get; private set; }
     public double DurationMinutes { get; private set; }
+    public double TrafficDelayMinutes { get; private set; }
     public List<RouteSegmentDto> Segments { get; private set; } = new();
 
     public static RouteComputationResult Failure(string message) => new()
@@ -223,11 +228,12 @@ public class RouteComputationResult
         Message = message
     };
 
-    public static RouteComputationResult CreateSuccess(List<RouteSegmentDto> segments, double distanceKm, double durationMinutes) => new()
+    public static RouteComputationResult CreateSuccess(List<RouteSegmentDto> segments, double distanceKm, double durationMinutes, double trafficDelayMinutes) => new()
     {
         Success = true,
         Segments = segments,
         DistanceKm = distanceKm,
-        DurationMinutes = durationMinutes
+        DurationMinutes = durationMinutes,
+        TrafficDelayMinutes = trafficDelayMinutes
     };
 }

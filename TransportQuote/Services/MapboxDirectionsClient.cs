@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 using TransportQuote.Models;
 
@@ -24,7 +25,33 @@ public class MapboxDirectionsClient
             return null;
         }
 
-        var url = $"https://api.mapbox.com/directions/v5/mapbox/driving/{start.Longitude.ToString(CultureInfo.InvariantCulture)},{start.Latitude.ToString(CultureInfo.InvariantCulture)};{end.Longitude.ToString(CultureInfo.InvariantCulture)},{end.Latitude.ToString(CultureInfo.InvariantCulture)}?geometries=geojson&access_token={_options.AccessToken}";
+        var preferredProfile = string.IsNullOrWhiteSpace(_options.Profile) ? "driving-traffic" : _options.Profile;
+        var profiles = new[]
+        {
+            preferredProfile,
+            "driving-traffic",
+            "driving"
+        }.Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var profile in profiles)
+        {
+            var segment = await QueryRouteAsync(profile, start, end, cancellationToken);
+            if (segment != null)
+            {
+                return segment;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<RouteSegmentData?> QueryRouteAsync(string profile, GeoCoordinate start, GeoCoordinate end, CancellationToken cancellationToken)
+    {
+        var supportsTraffic = profile.Contains("traffic", StringComparison.OrdinalIgnoreCase);
+        var annotations = supportsTraffic ? "duration,duration_typical" : "duration";
+        var url =
+            $"https://api.mapbox.com/directions/v5/mapbox/{profile}/{start.Longitude.ToString(CultureInfo.InvariantCulture)},{start.Latitude.ToString(CultureInfo.InvariantCulture)};{end.Longitude.ToString(CultureInfo.InvariantCulture)},{end.Latitude.ToString(CultureInfo.InvariantCulture)}" +
+            $"?alternatives=false&geometries=geojson&annotations={annotations}&overview=full&access_token={_options.AccessToken}";
 
         using var response = await _httpClient.GetAsync(url, cancellationToken);
         if (!response.IsSuccessStatusCode)
@@ -64,6 +91,15 @@ public class MapboxDirectionsClient
 
         segment.DistanceKm = route.TryGetProperty("distance", out var distance) ? distance.GetDouble() / 1000d : 0;
         segment.DurationMinutes = route.TryGetProperty("duration", out var duration) ? duration.GetDouble() / 60d : 0;
+
+        if (supportsTraffic && route.TryGetProperty("duration_typical", out var durationTypical))
+        {
+            var typicalMinutes = durationTypical.GetDouble() / 60d;
+            if (typicalMinutes > 0)
+            {
+                segment.TrafficDelayMinutes = Math.Max(segment.DurationMinutes - typicalMinutes, 0);
+            }
+        }
         return segment;
     }
 }
@@ -71,4 +107,5 @@ public class MapboxDirectionsClient
 public class MapboxOptions
 {
     public string AccessToken { get; set; } = string.Empty;
+    public string Profile { get; set; } = "driving-traffic";
 }

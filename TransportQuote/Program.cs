@@ -68,6 +68,7 @@ app.MapPost("/api/routes", async (RouteRequest request, LocationService location
     var aggregatedSegments = new List<RouteSegmentDto>();
     double totalDistance = 0;
     double totalDuration = 0;
+    double totalDelay = 0;
 
     for (int i = 0; i < orderedPoints.Count - 1; i++)
     {
@@ -84,6 +85,7 @@ app.MapPost("/api/routes", async (RouteRequest request, LocationService location
         aggregatedSegments.AddRange(segmentResult.Segments);
         totalDistance += segmentResult.DistanceKm;
         totalDuration += segmentResult.DurationMinutes;
+        totalDelay += segmentResult.TrafficDelayMinutes;
     }
 
     return Results.Ok(new RouteResponseDto
@@ -91,6 +93,7 @@ app.MapPost("/api/routes", async (RouteRequest request, LocationService location
         Success = true,
         DistanceKm = totalDistance,
         DurationMinutes = totalDuration,
+        TrafficDelayMinutes = totalDelay,
         Segments = aggregatedSegments
     });
 });
