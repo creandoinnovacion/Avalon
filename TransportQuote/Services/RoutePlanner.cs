@@ -4,7 +4,7 @@ namespace TransportQuote.Services;
 
 public class RoutePlanner
 {
-    private readonly OpenRouteServiceClient _openRouteServiceClient;
+    private readonly MapboxDirectionsClient _mapboxDirectionsClient;
 
     private static readonly FerryConnection IslaMujeresConnection = new(
         Landmass.IslaMujeres,
@@ -31,9 +31,9 @@ public class RoutePlanner
         [Landmass.IslaContoy] = ContoyConnection
     };
 
-    public RoutePlanner(OpenRouteServiceClient openRouteServiceClient)
+    public RoutePlanner(MapboxDirectionsClient mapboxDirectionsClient)
     {
-        _openRouteServiceClient = openRouteServiceClient;
+        _mapboxDirectionsClient = mapboxDirectionsClient;
     }
 
     public async Task<RouteComputationResult> BuildRouteAsync(Location from, Location to, CancellationToken cancellationToken)
@@ -55,10 +55,10 @@ public class RoutePlanner
         {
             if (step.Type == RouteStepType.Land)
             {
-                var routeSegment = await _openRouteServiceClient.GetRouteAsync(step.Start, step.End, "driving-car", cancellationToken);
+                var routeSegment = await _mapboxDirectionsClient.GetRouteAsync(step.Start, step.End, cancellationToken);
                 if (routeSegment == null)
                 {
-                    return RouteComputationResult.Failure("No se pudo obtener una ruta detallada desde OpenRouteService. Verifica la API key.");
+                    return RouteComputationResult.Failure("No se pudo obtener una ruta detallada desde el servicio de rutas.");
                 }
 
                 var coordinates = routeSegment.Coordinates;

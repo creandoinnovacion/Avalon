@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddScoped<TransportQuote.Services.LocationService>();
-builder.Services.AddHttpClient<OpenRouteServiceClient>();
+builder.Services.AddHttpClient<MapboxDirectionsClient>();
 builder.Services.AddScoped<RoutePlanner>();
 
 var app = builder.Build();
